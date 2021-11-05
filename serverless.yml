@@ -1,0 +1,59 @@
+service: bitbucket-code-pipeline-integration
+
+variablesResolutionMode: 20210326
+configValidationMode: error
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: ${opt:stage, 'default'}
+  region: us-east-1
+  lambdaHashingVersion: 20201221
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - ssm:GetParameters
+          Resource:
+            - !Sub arn:aws:ssm:\${AWS::Region}:\${AWS::AccountId}:parameter/bitbucket-code-pipeline-integration/${opt:stage, 'default'}/*
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+          Resource:
+              - !Join
+                - ''
+                - - !GetAtt Bucket.Arn
+                  - '/*'
+
+functions:
+  webhook:
+    handler: src/webhook.webhookHandler
+    environment:
+      AWS_STAGE: ${opt:stage, 'default'}
+      S3_BUCKET: !Ref Bucket
+    events:
+      - httpApi:
+          method: POST
+          path: /
+    memorySize: 512
+    layers:
+      - !Sub arn:aws:lambda:\${AWS::Region}:553035198032:layer:git-lambda2:8
+
+resources:
+  Resources:
+    Bucket:
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      Properties:
+        VersioningConfiguration:
+          Status: Enabled
+
+plugins:
+  - serverless-webpack
+
+custom:
+  webpack:
+    includeModules:
+      forceExclude:
+        - aws-sdk
