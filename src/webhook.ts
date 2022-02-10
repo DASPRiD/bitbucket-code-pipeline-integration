@@ -108,7 +108,7 @@ const archiveBranch = async (
 
     child.on('close', code => {
         if (code && code > 0) {
-            console.error('GIT archive failed');
+            throw new Error('GIT archive failed');
         }
     });
 
