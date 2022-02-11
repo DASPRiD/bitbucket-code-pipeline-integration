@@ -48,9 +48,9 @@ export const webhookHandler = async (event : APIGatewayProxyEventV2) : Promise<A
     await fs.writeFile(knownHostsFilename, config['/knownHosts']);
 
     try {
-        await Promise.all(body.changes.map(async change => {
+        for (const change of body.changes) {
             if (change.ref.type !== 'BRANCH') {
-                return;
+                continue;
             }
 
             const zip = await archiveBranch(
@@ -67,7 +67,7 @@ export const webhookHandler = async (event : APIGatewayProxyEventV2) : Promise<A
                 Key: `${body.repository.project.key}/${body.repository.name}/${change.ref.displayId}.zip`,
                 Body: zip,
             }).promise();
-        }));
+        }
     } finally {
         await fs.rm(sshKeyFilename);
         await fs.rm(knownHostsFilename);
