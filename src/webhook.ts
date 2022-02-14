@@ -45,13 +45,16 @@ export const webhookHandler = async (event : APIGatewayProxyEventV2) : Promise<A
     await fs.chmod(sshKeyFilename, 0o400);
 
     const knownHostsFilename = `/tmp/${randomUUID()}`;
-    await fs.writeFile(knownHostsFilename, config['/knownHosts']);
 
     try {
         for (const change of body.changes) {
             if (change.ref.type !== 'BRANCH') {
                 continue;
             }
+
+            // SSH modifies the known hosts file, so we have to re-create it after each run, otherwise subsequent runs
+            // will fail.
+            await fs.writeFile(knownHostsFilename, config['/knownHosts']);
 
             const zip = await archiveBranch(
                 sshKeyFilename,
